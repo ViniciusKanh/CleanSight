@@ -867,30 +867,99 @@ def create_simple_plot(plot_type, title):
         # Retorna placeholder se der erro
         return f"data:image/png;base64,{base64.b64encode(b'Plot Error').decode('utf-8')}"
 
-def create_pca_3d_plot(title):
-    """Cria um gráfico PCA 3D interativo usando Plotly"""
-    import plotly.express as px
+
+def perform_pca(target_column: str, n_components: int):
+    """Executa PCA real baseado na coluna target"""
     import pandas as pd
-    import numpy as np
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.decomposition import PCA
+
+    encoding = DATASET_INFO.get('encoding_used', 'utf-8')
+    delimiter = DATASET_INFO.get('delimiter_used', ',')
+
+    df = pd.read_csv(CURRENT_FILE, delimiter=delimiter, encoding=encoding)
+
+    if target_column not in df.columns:
+        raise ValueError(f'Coluna {target_column} não encontrada')
+
+    df = df.dropna(subset=[target_column])
+
+    y = df[target_column].astype(str)
+    X = df.drop(columns=[target_column])
+    X = pd.get_dummies(X, drop_first=True)
+    X = X.apply(pd.to_numeric, errors='coerce').fillna(0)
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    pca = PCA(n_components=n_components)
+    comps = pca.fit_transform(X_scaled)
+
+    explained = [float(round(v, 3)) for v in pca.explained_variance_ratio_]
+    cumulative = float(round(sum(pca.explained_variance_ratio_), 3))
+
+    return comps, y, explained, cumulative
+
+
+def create_pca_plot(target_column: str, title: str):
+    """Gera figura PCA 2D utilizando matplotlib"""
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    import pandas as pd
 
     try:
-        np.random.seed(42)
+        comps, labels, explained, cumulative = perform_pca(target_column, 2)
+
+        unique_labels = sorted(set(labels))
+        cmap = plt.cm.get_cmap('tab10', len(unique_labels))
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        for idx, lbl in enumerate(unique_labels):
+            mask = [l == lbl for l in labels]
+            ax.scatter(comps[mask, 0], comps[mask, 1], color=cmap(idx), label=str(lbl), alpha=0.7)
+
+        ax.set_xlabel(f'PC1 ({explained[0]*100:.1f}%)')
+        ax.set_ylabel(f'PC2 ({explained[1]*100:.1f}%)')
+        ax.set_title(title)
+        ax.legend()
+
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+        buffer.seek(0)
+        plot_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        plt.close(fig)
+
+        return f"data:image/png;base64,{plot_data}", explained, cumulative
+
+    except Exception as e:
+        print(f"Erro ao criar PCA 2D: {str(e)}")
+        return f"data:image/png;base64,{base64.b64encode(b'Plot Error').decode('utf-8')}", [0,0], 0
+
+def create_pca_3d_plot(target_column: str, title: str):
+    """Cria um gráfico PCA 3D real usando Plotly"""
+    import plotly.express as px
+    import pandas as pd
+
+    try:
+        comps, labels, explained, cumulative = perform_pca(target_column, 3)
         df = pd.DataFrame({
-            'PC1': np.random.randn(100),
-            'PC2': np.random.randn(100),
-            'PC3': np.random.randn(100),
-            'label': np.random.choice(['A', 'B', 'C'], 100)
+            'PC1': comps[:, 0],
+            'PC2': comps[:, 1],
+            'PC3': comps[:, 2],
+            'label': labels
         })
 
         fig = px.scatter_3d(df, x='PC1', y='PC2', z='PC3', color='label')
         fig.update_layout(title=title)
 
-        # Inclui plotly.js diretamente para evitar problemas de carregamento
-        return fig.to_html(full_html=False, include_plotlyjs=True)
+        html = fig.to_html(full_html=False, include_plotlyjs=True)
+
+        return html, explained, cumulative
 
     except Exception as e:
         print(f"Erro ao criar PCA 3D: {str(e)}")
-        return "<div>Plot Error</div>"
+        return "<div>Plot Error</div>", [0,0,0], 0
 
 @preprocessing_bp.route('/statistics', methods=['POST'])
 def generate_statistics():
@@ -966,18 +1035,23 @@ def generate_pca():
         if not CURRENT_FILE or not os.path.exists(CURRENT_FILE):
             return jsonify({'success': False, 'error': 'Nenhum arquivo carregado'})
         
-        # Gera gráfico PCA real
-        pca_plot = create_simple_plot('pca', 'Análise PCA 2D')
-        
+        data = request.json
+        target_column = data.get('target_column')
+
+        if not target_column:
+            return jsonify({'success': False, 'error': 'Coluna target não especificada'})
+
+        pca_plot, explained, cumulative = create_pca_plot(target_column, 'Análise PCA 2D')
+
         return jsonify({
             'success': True,
             'pca_plot': pca_plot,
-            'explained_variance': [0.523, 0.287],
-            'cumulative_variance': 0.810,
+            'explained_variance': explained,
+            'cumulative_variance': cumulative,
             'pca_interpretation': {
-                'pc1_description': 'Primeira componente captura a variação principal dos dados',
-                'pc2_description': 'Segunda componente captura variação secundária ortogonal',
-                'recommendation': 'PCA mostra boa separação entre as classes do dataset'
+                'pc1_description': f'PC1 explica {(explained[0]*100):.1f}% da variância',
+                'pc2_description': f'PC2 explica {(explained[1]*100):.1f}% da variância',
+                'recommendation': 'Use as componentes para visualizar separação das classes',
             }
         })
     
@@ -994,13 +1068,19 @@ def generate_pca_3d():
         if not CURRENT_FILE or not os.path.exists(CURRENT_FILE):
             return jsonify({'success': False, 'error': 'Nenhum arquivo carregado'})
 
-        pca_plot_html = create_pca_3d_plot('Análise PCA 3D')
+        data = request.json
+        target_column = data.get('target_column')
+
+        if not target_column:
+            return jsonify({'success': False, 'error': 'Coluna target não especificada'})
+
+        pca_plot_html, explained, cumulative = create_pca_3d_plot(target_column, 'Análise PCA 3D')
 
         return jsonify({
             'success': True,
             'pca_plot': pca_plot_html,
-            'explained_variance': [0.45, 0.25, 0.15],
-            'cumulative_variance': 0.85
+            'explained_variance': explained,
+            'cumulative_variance': cumulative
         })
 
     except Exception as e:
