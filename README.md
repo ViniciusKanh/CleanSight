@@ -16,6 +16,7 @@
 - ⚖️ **Balanceamento de classes**
 - 🧊 **Remoção de duplicatas**
 - 📈 **Gráficos de PCA, correlação e outliers**
+- 📝 **Perfilamento completo do dataset** (pandas profiling)
 - 💾 **Download do dataset processado**
 - 🌐 **API RESTful** com múltiplos endpoints úteis
 
@@ -76,11 +77,14 @@ http://localhost:5000
 | POST   | `/api/upload`    | Faz upload do dataset                  |
 | POST   | `/api/analyze`   | Analisa a coluna target e qualidade    |
 | POST   | `/api/process`   | Realiza o pré-processamento completo   |
-| POST   | `/api/statistics`| Gera estatísticas visuais              |
+| POST   | `/api/statistics`| Estatísticas e perfilamento do dataset |
 | POST   | `/api/pca`       | Gera gráfico PCA 2D                    |
 | POST   | `/api/outliers`  | Detecta e visualiza outliers           |
 | GET    | `/api/download`  | Baixa o dataset processado             |
 | POST   | `/api/clear`     | Limpa arquivos e estado da sessão      |
+
+Para ver um relatório detalhado com o **pandas profiling**, utilize a rota
+`/api/statistics` ou clique em **Perfil do Dataset** na interface.
 
 ---
 

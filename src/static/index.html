@@ -680,6 +680,7 @@
             <div class="button-group">
                 <button class="btn" id="processBtn">🚀 Processar Dataset</button>
                 <button class="btn btn-secondary" id="statisticsBtn">📊 Análise Estatística</button>
+                <button class="btn btn-secondary" id="profilingBtn">🔍 Perfil do Dataset</button>
                 <button class="btn btn-success" id="pcaBtn" disabled>📈 Gráfico PCA 2D</button>
                 <button class="btn btn-secondary" id="outliersBtn" disabled>🎯 Gráfico de Outliers</button>
             </div>
@@ -745,6 +746,7 @@
             const downloadBtn = document.getElementById('downloadBtn');
             const clearBtn = document.getElementById('clearBtn');
             const statisticsBtn = document.getElementById('statisticsBtn');
+            const profilingBtn = document.getElementById('profilingBtn');
             const pcaBtn = document.getElementById('pcaBtn');
             const outliersBtn = document.getElementById('outliersBtn');
 
@@ -762,6 +764,7 @@
             downloadBtn.addEventListener('click', downloadProcessed);
             clearBtn.addEventListener('click', clearSession);
             statisticsBtn.addEventListener('click', generateStatistics);
+            profilingBtn.addEventListener('click', generateProfiling);
             pcaBtn.addEventListener('click', generatePCA);
             outliersBtn.addEventListener('click', generateOutliers);
 
@@ -1254,6 +1257,33 @@
                 }
             } catch (error) {
                 showError('analysisResults', 'Erro de conexão: ' + error.message);
+            }
+        }
+
+        async function generateProfiling() {
+            if (!targetColumn) return;
+
+            try {
+                const response = await fetch('/api/statistics', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        target_column: targetColumn
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.profiling_report) {
+                    window.profilingReportHTML = result.profiling_report;
+                    openProfiling();
+                } else {
+                    alert('Perfilamento indisponível.');
+                }
+            } catch (error) {
+                alert('Erro ao gerar perfilamento: ' + error.message);
             }
         }
 
