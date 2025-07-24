@@ -682,6 +682,7 @@
                 <button class="btn btn-secondary" id="statisticsBtn">📊 Análise Estatística</button>
                 <button class="btn btn-secondary" id="profilingBtn">🔍 Perfil do Dataset</button>
                 <button class="btn btn-success" id="pcaBtn" disabled>📈 Gráfico PCA 2D</button>
+                <button class="btn btn-success" id="pca3dBtn" disabled>📊 Gráfico PCA 3D</button>
                 <button class="btn btn-secondary" id="outliersBtn" disabled>🎯 Gráfico de Outliers</button>
             </div>
         </div>
@@ -749,6 +750,7 @@
             const statisticsBtn = document.getElementById('statisticsBtn');
             const profilingBtn = document.getElementById('profilingBtn');
             const pcaBtn = document.getElementById('pcaBtn');
+            const pca3dBtn = document.getElementById('pca3dBtn');
             const outliersBtn = document.getElementById('outliersBtn');
 
             // Upload events
@@ -767,6 +769,7 @@
             statisticsBtn.addEventListener('click', generateStatistics);
             profilingBtn.addEventListener('click', generateProfiling);
             pcaBtn.addEventListener('click', generatePCA);
+            pca3dBtn.addEventListener('click', generatePCA3D);
             outliersBtn.addEventListener('click', generateOutliers);
 
             // Modal events
@@ -962,6 +965,7 @@
                     
                     // Habilita botões
                     document.getElementById('pcaBtn').disabled = false;
+                    document.getElementById('pca3dBtn').disabled = false;
                     document.getElementById('outliersBtn').disabled = false;
                 } else {
                     showError('analysisResults', result.error || 'Erro na análise');
@@ -1176,6 +1180,7 @@
                     document.getElementById('fileInput').value = '';
                     document.getElementById('analyzeBtn').disabled = true;
                     document.getElementById('pcaBtn').disabled = true;
+                    document.getElementById('pca3dBtn').disabled = true;
                     document.getElementById('outliersBtn').disabled = true;
                     
                     // Reset checkboxes
@@ -1336,6 +1341,37 @@
                     `);
                 } else {
                     showError('analysisResults', result.error || 'Erro ao gerar PCA');
+                }
+            } catch (error) {
+                showError('analysisResults', 'Erro de conexão: ' + error.message);
+            }
+        }
+
+        // Gera gráfico PCA 3D
+        async function generatePCA3D() {
+            if (!targetColumn) return;
+
+            try {
+                const response = await fetch('/api/pca3d', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        target_column: targetColumn
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showModal('📊 Análise PCA 3D', `
+                        <div class="plot-container">
+                            ${result.pca_plot}
+                        </div>
+                    `);
+                } else {
+                    showError('analysisResults', result.error || 'Erro ao gerar PCA 3D');
                 }
             } catch (error) {
                 showError('analysisResults', 'Erro de conexão: ' + error.message);
