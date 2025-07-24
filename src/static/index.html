@@ -1278,7 +1278,11 @@
 
                 if (result.success && result.profiling_report) {
                     window.profilingReportHTML = result.profiling_report;
-                    openProfiling();
+                    if (window.openProfiling) {
+                        window.openProfiling();
+                    } else {
+                        alert('Função de perfilamento indisponível.');
+                    }
                 } else {
                     alert('Perfilamento indisponível.');
                 }
@@ -1376,14 +1380,25 @@
         function showModal(title, content) {
             const modal = document.getElementById('plotModal');
             const modalContent = document.getElementById('modalContent');
-            
+
             modalContent.innerHTML = `
                 <h2 style="color: #1e293b; margin-bottom: 20px;">${title}</h2>
                 ${content}
             `;
-            
+
             modal.style.display = 'block';
         }
+
+        function openProfiling() {
+            if (window.profilingReportHTML) {
+                const w = window.open('about:blank');
+                w.document.write(window.profilingReportHTML);
+                w.document.close();
+            } else {
+                alert('Relatório de profiling não disponível.');
+            }
+        }
+        window.openProfiling = openProfiling;
 
         function createDescribeTable(data) {
             const columns = Object.keys(data || {});
