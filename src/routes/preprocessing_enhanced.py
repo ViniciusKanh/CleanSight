@@ -885,7 +885,8 @@ def create_pca_3d_plot(title):
         fig = px.scatter_3d(df, x='PC1', y='PC2', z='PC3', color='label')
         fig.update_layout(title=title)
 
-        return fig.to_html(full_html=False)
+        # Inclui plotly.js para o gráfico funcionar no frontend
+        return fig.to_html(full_html=False, include_plotlyjs='cdn')
 
     except Exception as e:
         print(f"Erro ao criar PCA 3D: {str(e)}")

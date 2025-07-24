@@ -1429,6 +1429,17 @@
                 ${content}
             `;
 
+            // Executa scripts embutidos (necessário para Plotly)
+            modalContent.querySelectorAll('script').forEach(oldScript => {
+                const newScript = document.createElement('script');
+                if (oldScript.src) {
+                    newScript.src = oldScript.src;
+                } else {
+                    newScript.textContent = oldScript.textContent;
+                }
+                oldScript.replaceWith(newScript);
+            });
+
             modal.style.display = 'block';
         }
 
