@@ -53,6 +53,8 @@ Flask
 chardet
 matplotlib
 numpy
+pandas
+ydata-profiling
 ```
 
 ### 3. Execute o servidor Flask
