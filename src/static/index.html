@@ -460,6 +460,28 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
+        .describe-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .describe-table th,
+        .describe-table td {
+            border: 1px solid #e2e8f0;
+            padding: 8px;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .describe-table th {
+            background: #eff6ff;
+        }
+
+        .describe-table tbody tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
         .button-group {
             display: flex;
             flex-wrap: wrap;
@@ -1187,6 +1209,19 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    let tableHtml = '';
+                    if (result.describe_table) {
+                        tableHtml = createDescribeTable(result.describe_table);
+                    }
+                    let profilingHtml = '';
+                    if (result.profiling_report) {
+                        profilingHtml = `
+                            <details style="margin-top: 20px;">
+                                <summary style="cursor: pointer; font-weight: 600;">📑 Relatório de Profiling</summary>
+                                <div>${result.profiling_report}</div>
+                            </details>
+                        `;
+                    }
                     showModal('📊 Análise Estatística Completa', `
                         <div class="plot-container">
                             <h3>Matriz de Correlação</h3>
@@ -1211,6 +1246,8 @@
                             <p><strong>Features Categóricas:</strong> ${result.statistics_summary.categorical_features}</p>
                             <p><strong>Score de Qualidade:</strong> ${result.statistics_summary.data_quality_score.toFixed(1)}%</p>
                         </div>
+                        ${tableHtml}
+                        ${profilingHtml}
                     `);
                 } else {
                     showError('analysisResults', result.error || 'Erro ao gerar estatísticas');
@@ -1316,6 +1353,26 @@
             `;
             
             modal.style.display = 'block';
+        }
+
+        function createDescribeTable(data) {
+            const columns = Object.keys(data || {});
+            if (columns.length === 0) return '';
+            const stats = Object.keys(data[columns[0]]);
+            let html = '<table class="describe-table"><thead><tr><th>Estatística</th>';
+            columns.forEach(col => {
+                html += `<th>${col}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            stats.forEach(stat => {
+                html += `<tr><td>${stat}</td>`;
+                columns.forEach(col => {
+                    html += `<td>${data[col][stat]}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            return html;
         }
 
         // Funções de utilidade
