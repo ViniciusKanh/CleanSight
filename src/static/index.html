@@ -463,17 +463,23 @@
         .describe-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
+            margin-top: 20px;
         }
 
-        .describe-table th, .describe-table td {
+        .describe-table th,
+        .describe-table td {
             border: 1px solid #e2e8f0;
             padding: 8px;
+            font-size: 0.9rem;
             text-align: center;
         }
 
         .describe-table th {
-            background: #f1f5f9;
+            background: #eff6ff;
+        }
+
+        .describe-table tbody tr:nth-child(even) {
+            background: #f8fafc;
         }
 
         .button-group {
@@ -1206,24 +1212,19 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    const describe = result.describe_table || {};
                     let tableHtml = '';
-                    const cols = Object.keys(describe);
-                    if (cols.length > 0) {
-                        const stats = Object.keys(describe[cols[0]]);
-                        tableHtml += '<table class="describe-table">';
-                        tableHtml += '<thead><tr><th>Estatística</th>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr></thead>';
-                        tableHtml += '<tbody>';
-                        stats.forEach(stat => {
-                            tableHtml += '<tr><td>' + stat + '</td>' + cols.map(c => `<td>${describe[c][stat]}</td>`).join('') + '</tr>';
-                        });
-                        tableHtml += '</tbody></table>';
+                    if (result.describe_table) {
+                        tableHtml = createDescribeTable(result.describe_table);
                     }
-
-                    const profilingButton = result.profiling_report ? '<button class="btn" onclick="openProfiling()">🔍 Ver Perfilamento Completo</button>' : '';
-
-                    window.profilingReportHTML = result.profiling_report || null;
-
+                    let profilingHtml = '';
+                    if (result.profiling_report) {
+                        profilingHtml = `
+                            <details style="margin-top: 20px;">
+                                <summary style="cursor: pointer; font-weight: 600;">📑 Relatório de Profiling</summary>
+                                <div>${result.profiling_report}</div>
+                            </details>
+                        `;
+                    }
                     showModal('📊 Análise Estatística Completa', `
                         <div class="plot-container">
                             <h3>Matriz de Correlação</h3>
@@ -1249,7 +1250,7 @@
                             <p><strong>Score de Qualidade:</strong> ${result.statistics_summary.data_quality_score.toFixed(1)}%</p>
                         </div>
                         ${tableHtml}
-                        <div style="text-align:center; margin-top:20px;">${profilingButton}</div>
+                        ${profilingHtml}
                     `);
                 } else {
                     showError('analysisResults', result.error || 'Erro ao gerar estatísticas');
@@ -1384,14 +1385,24 @@
             modal.style.display = 'block';
         }
 
-        function openProfiling() {
-            if (window.profilingReportHTML) {
-                const w = window.open('about:blank');
-                w.document.write(window.profilingReportHTML);
-                w.document.close();
-            } else {
-                alert('Relatório de profiling não disponível.');
-            }
+        function createDescribeTable(data) {
+            const columns = Object.keys(data || {});
+            if (columns.length === 0) return '';
+            const stats = Object.keys(data[columns[0]]);
+            let html = '<table class="describe-table"><thead><tr><th>Estatística</th>';
+            columns.forEach(col => {
+                html += `<th>${col}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            stats.forEach(stat => {
+                html += `<tr><td>${stat}</td>`;
+                columns.forEach(col => {
+                    html += `<td>${data[col][stat]}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            return html;
         }
 
         // Funções de utilidade
