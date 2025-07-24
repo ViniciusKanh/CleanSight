@@ -1278,7 +1278,11 @@
 
                 if (result.success && result.profiling_report) {
                     window.profilingReportHTML = result.profiling_report;
-                    openProfiling();
+                    if (window.openProfiling) {
+                        window.openProfiling();
+                    } else {
+                        alert('Função de perfilamento indisponível.');
+                    }
                 } else {
                     alert('Perfilamento indisponível.');
                 }
