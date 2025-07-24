@@ -714,6 +714,7 @@
         let currentFile = null;
         let targetColumn = null;
         let datasetInfo = null;
+        let profilingWindow = null;
 
         // Inicialização
         document.addEventListener('DOMContentLoaded', function() {
@@ -1263,6 +1264,10 @@
         async function generateProfiling() {
             if (!targetColumn) return;
 
+            if (!profilingWindow || profilingWindow.closed) {
+                profilingWindow = window.open('about:blank');
+            }
+
             try {
                 const response = await fetch('/api/statistics', {
                     method: 'POST',
@@ -1281,9 +1286,15 @@
                     openProfiling();
                 } else {
                     alert('Perfilamento indisponível.');
+                    if (profilingWindow) {
+                        profilingWindow.close();
+                    }
                 }
             } catch (error) {
                 alert('Erro ao gerar perfilamento: ' + error.message);
+                if (profilingWindow) {
+                    profilingWindow.close();
+                }
             }
         }
 
@@ -1386,12 +1397,20 @@
         }
 
         function openProfiling() {
-            if (window.profilingReportHTML) {
-                const w = window.open('about:blank');
-                w.document.write(window.profilingReportHTML);
-                w.document.close();
-            } else {
+            if (!window.profilingReportHTML) {
                 alert('Relatório de profiling não disponível.');
+                return;
+            }
+
+            if (!profilingWindow || profilingWindow.closed) {
+                profilingWindow = window.open('about:blank');
+            }
+
+            if (profilingWindow) {
+                profilingWindow.document.write(window.profilingReportHTML);
+                profilingWindow.document.close();
+            } else {
+                alert('Não foi possível abrir a janela de profiling. Verifique o bloqueador de pop-ups.');
             }
         }
         window.openProfiling = openProfiling;
