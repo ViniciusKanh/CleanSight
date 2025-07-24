@@ -460,6 +460,22 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
 
+        .describe-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .describe-table th, .describe-table td {
+            border: 1px solid #e2e8f0;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .describe-table th {
+            background: #f1f5f9;
+        }
+
         .button-group {
             display: flex;
             flex-wrap: wrap;
@@ -658,6 +674,7 @@
             <div class="button-group">
                 <button class="btn" id="processBtn">🚀 Processar Dataset</button>
                 <button class="btn btn-secondary" id="statisticsBtn">📊 Análise Estatística</button>
+                <button class="btn btn-secondary" id="profilingBtn">🔍 Perfil do Dataset</button>
                 <button class="btn btn-success" id="pcaBtn" disabled>📈 Gráfico PCA 2D</button>
                 <button class="btn btn-secondary" id="outliersBtn" disabled>🎯 Gráfico de Outliers</button>
             </div>
@@ -723,6 +740,7 @@
             const downloadBtn = document.getElementById('downloadBtn');
             const clearBtn = document.getElementById('clearBtn');
             const statisticsBtn = document.getElementById('statisticsBtn');
+            const profilingBtn = document.getElementById('profilingBtn');
             const pcaBtn = document.getElementById('pcaBtn');
             const outliersBtn = document.getElementById('outliersBtn');
 
@@ -740,6 +758,7 @@
             downloadBtn.addEventListener('click', downloadProcessed);
             clearBtn.addEventListener('click', clearSession);
             statisticsBtn.addEventListener('click', generateStatistics);
+            profilingBtn.addEventListener('click', generateProfiling);
             pcaBtn.addEventListener('click', generatePCA);
             outliersBtn.addEventListener('click', generateOutliers);
 
@@ -1187,6 +1206,24 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    const describe = result.describe_table || {};
+                    let tableHtml = '';
+                    const cols = Object.keys(describe);
+                    if (cols.length > 0) {
+                        const stats = Object.keys(describe[cols[0]]);
+                        tableHtml += '<table class="describe-table">';
+                        tableHtml += '<thead><tr><th>Estatística</th>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr></thead>';
+                        tableHtml += '<tbody>';
+                        stats.forEach(stat => {
+                            tableHtml += '<tr><td>' + stat + '</td>' + cols.map(c => `<td>${describe[c][stat]}</td>`).join('') + '</tr>';
+                        });
+                        tableHtml += '</tbody></table>';
+                    }
+
+                    const profilingButton = result.profiling_report ? '<button class="btn" onclick="openProfiling()">🔍 Ver Perfilamento Completo</button>' : '';
+
+                    window.profilingReportHTML = result.profiling_report || null;
+
                     showModal('📊 Análise Estatística Completa', `
                         <div class="plot-container">
                             <h3>Matriz de Correlação</h3>
@@ -1211,12 +1248,41 @@
                             <p><strong>Features Categóricas:</strong> ${result.statistics_summary.categorical_features}</p>
                             <p><strong>Score de Qualidade:</strong> ${result.statistics_summary.data_quality_score.toFixed(1)}%</p>
                         </div>
+                        ${tableHtml}
+                        <div style="text-align:center; margin-top:20px;">${profilingButton}</div>
                     `);
                 } else {
                     showError('analysisResults', result.error || 'Erro ao gerar estatísticas');
                 }
             } catch (error) {
                 showError('analysisResults', 'Erro de conexão: ' + error.message);
+            }
+        }
+
+        async function generateProfiling() {
+            if (!targetColumn) return;
+
+            try {
+                const response = await fetch('/api/statistics', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        target_column: targetColumn
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.profiling_report) {
+                    window.profilingReportHTML = result.profiling_report;
+                    openProfiling();
+                } else {
+                    alert('Perfilamento indisponível.');
+                }
+            } catch (error) {
+                alert('Erro ao gerar perfilamento: ' + error.message);
             }
         }
 
@@ -1316,6 +1382,16 @@
             `;
             
             modal.style.display = 'block';
+        }
+
+        function openProfiling() {
+            if (window.profilingReportHTML) {
+                const w = window.open('about:blank');
+                w.document.write(window.profilingReportHTML);
+                w.document.close();
+            } else {
+                alert('Relatório de profiling não disponível.');
+            }
         }
 
         // Funções de utilidade

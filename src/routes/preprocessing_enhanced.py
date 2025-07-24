@@ -887,7 +887,34 @@ def generate_statistics():
             'target_distribution': create_simple_plot('target', 'Distribuição da Target'),
             'missing_values_heatmap': create_simple_plot('missing', 'Mapa de Valores Ausentes')
         }
-        
+
+        describe_table = None
+        profiling_report = None
+
+        try:
+            import pandas as pd
+            try:
+                df = pd.read_csv(
+                    CURRENT_FILE,
+                    delimiter=DATASET_INFO.get('delimiter_used', ','),
+                    encoding=DATASET_INFO.get('encoding_used', 'utf-8'),
+                )
+
+                describe_table = df.describe(include='all').fillna('').to_dict()
+
+                try:
+                    from ydata_profiling import ProfileReport
+
+                    profile = ProfileReport(df, minimal=True)
+                    profiling_report = profile.to_html()
+                except Exception:
+                    profiling_report = None
+            except Exception:
+                describe_table = None
+        except Exception:
+            describe_table = None
+            profiling_report = None
+
         return jsonify({
             'success': True,
             'plots': stats_plots,
@@ -896,7 +923,9 @@ def generate_statistics():
                 'numeric_features': len(DATASET_INFO['numeric_columns']),
                 'categorical_features': len(DATASET_INFO['categorical_columns']),
                 'data_quality_score': DATASET_INFO['data_quality']['completeness']
-            }
+            },
+            'describe_table': describe_table,
+            'profiling_report': profiling_report
         })
     
     except Exception as e:
